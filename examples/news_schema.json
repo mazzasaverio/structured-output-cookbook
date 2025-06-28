@@ -44,6 +44,6 @@
         "description": "Overall sentiment of the article (positive, negative, neutral)"
       }
     },
-    "required": ["headline", "summary", "key_people", "organizations"],
+    "required": ["headline", "summary", "publication_date", "author", "location", "key_people", "organizations", "category", "sentiment"],
     "additionalProperties": false
   }
