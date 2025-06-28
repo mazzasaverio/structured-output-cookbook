@@ -1,0 +1,1 @@
+"""Predefined templates for common extraction tasks."""

@@ -1,0 +1,103 @@
+[project]
+name = "structured-output-cookbook"
+version = "0.1.0"
+description = "LLM-powered structured output extraction with predefined and custom schemas"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [
+    { name = "Saverio Mazza", email = "saverio3107@gmail.com" }
+]
+license = { text = "MIT" }
+keywords = ["llm", "structured-output", "extraction", "ai", "openai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "openai>=1.54.0",
+    "pydantic>=2.9.0",
+    "loguru>=0.7.2",
+    "click>=8.1.7",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.12.0",
+    "black>=24.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+]
+
+[project.scripts]
+structured-output = "structured_output_cookbook.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mazzasaverio/structured-output-cookbook"
+Repository = "https://github.com/mazzasaverio/structured-output-cookbook"
+Issues = "https://github.com/mazzasaverio/structured-output-cookbook/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.12.0",
+    "black>=24.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+select = ["E", "W", "F", "I", "N", "UP", "ANN", "S", "B", "A", "COM", "C4", "DTZ", "T10", "EM", "EXE", "ISC", "ICN", "G", "INP", "PIE", "T20", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SIM", "TID", "TCH", "INT", "ARG", "PTH", "ERA", "PD", "PGH", "PL", "TRY", "NPY", "RUF"]
+ignore = ["ANN101", "ANN102", "S101", "PLR0913"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--cov=src/structured_output_cookbook",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=80",
+    "-v"
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/test_*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]

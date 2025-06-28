@@ -1,1 +1,0 @@
-# structured-output-cookbook
