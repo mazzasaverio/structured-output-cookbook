@@ -1,67 +1,36 @@
 """Recipe extraction schema."""
 
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import List, Union, Dict, Any
+from pydantic import BaseModel, Field, ConfigDict
 from ..schemas.base import BaseSchema
 
 
 class Ingredient(BaseModel):
     """Single ingredient with quantity and unit."""
     
+    model_config = ConfigDict(extra="forbid")
+    
     name: str = Field(description="Ingredient name")
-    quantity: Optional[str] = Field(default=None, description="Amount needed")
-    unit: Optional[str] = Field(default=None, description="Unit of measurement")
-    notes: Optional[str] = Field(default=None, description="Additional notes")
+    quantity: Union[str, None] = Field(description="Amount needed")
+    unit: Union[str, None] = Field(description="Unit of measurement")
+    notes: Union[str, None] = Field(description="Additional notes")
 
 
 class RecipeSchema(BaseSchema):
     """Extract structured information from recipes."""
     
     name: str = Field(description="Recipe name or title")
-    description: Optional[str] = Field(
-        default=None, 
-        description="Brief description of the dish"
-    )
-    cuisine: Optional[str] = Field(
-        default=None,
-        description="Cuisine type (Italian, Asian, etc.)"
-    )
-    difficulty: Optional[str] = Field(
-        default=None,
-        description="Difficulty level (easy, medium, hard)"
-    )
-    prep_time: Optional[str] = Field(
-        default=None,
-        description="Preparation time"
-    )
-    cook_time: Optional[str] = Field(
-        default=None,
-        description="Cooking time"
-    )
-    total_time: Optional[str] = Field(
-        default=None,
-        description="Total time required"
-    )
-    servings: Optional[int] = Field(
-        default=None,
-        description="Number of servings"
-    )
-    ingredients: List[Ingredient] = Field(
-        default_factory=list,
-        description="List of ingredients with quantities"
-    )
-    instructions: List[str] = Field(
-        default_factory=list,
-        description="Step-by-step cooking instructions"
-    )
-    tags: List[str] = Field(
-        default_factory=list,
-        description="Recipe tags (vegetarian, gluten-free, etc.)"
-    )
-    nutrition: Optional[dict] = Field(
-        default=None,
-        description="Nutritional information if available"
-    )
+    description: Union[str, None] = Field(description="Brief description of the dish")
+    cuisine: Union[str, None] = Field(description="Cuisine type (Italian, Asian, etc.)")
+    difficulty: Union[str, None] = Field(description="Difficulty level (easy, medium, hard)")
+    prep_time: Union[str, None] = Field(description="Preparation time")
+    cook_time: Union[str, None] = Field(description="Cooking time")
+    total_time: Union[str, None] = Field(description="Total time required")
+    servings: Union[int, None] = Field(description="Number of servings")
+    ingredients: List[Ingredient] = Field(description="List of ingredients with quantities")
+    instructions: List[str] = Field(description="Step-by-step cooking instructions")
+    tags: List[str] = Field(description="Recipe tags (vegetarian, gluten-free, etc.)")
+    nutrition: Union[Dict[str, Any], None] = Field(description="Nutritional information if available")
     
     @classmethod
     def get_extraction_prompt(cls) -> str:

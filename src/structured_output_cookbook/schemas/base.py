@@ -3,10 +3,17 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Type
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class BaseSchema(BaseModel, ABC):
+    """Abstract base class for all extraction schemas."""
+    
+    model_config = ConfigDict(
+        extra="forbid",  # This generates additionalProperties: false
+        validate_assignment=True,
+        str_strip_whitespace=True
+    )
     """Abstract base class for all extraction schemas."""
     
     @classmethod

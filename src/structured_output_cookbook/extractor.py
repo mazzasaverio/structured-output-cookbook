@@ -44,6 +44,10 @@ class StructuredExtractor:
             # Use custom prompt or schema default
             prompt = system_prompt or schema.get_extraction_prompt()
             
+            # Generate schema and ensure additionalProperties is false
+            schema_dict = schema.model_json_schema()
+            self._ensure_additional_properties_false(schema_dict)
+            
             response = self.client.chat.completions.create(
                 model=self.config.openai_model,
                 messages=[
@@ -53,9 +57,9 @@ class StructuredExtractor:
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
-                        "name": schema.get_schema_name().lower(),
+                        "name": schema.get_schema_name().lower().replace(" ", "_"),
                         "strict": True,
-                        "schema": schema.model_json_schema()
+                        "schema": schema_dict
                     }
                 },
                 timeout=self.config.timeout_seconds
@@ -87,6 +91,24 @@ class StructuredExtractor:
             self.logger.error(f"Extraction failed: {e}")
             return ExtractionResult.error_result(str(e))
     
+    def _ensure_additional_properties_false(self, schema_dict: Dict[str, Any]) -> None:
+        """Recursively ensure all objects have additionalProperties: false."""
+        if isinstance(schema_dict, dict):
+            if schema_dict.get("type") == "object":
+                schema_dict["additionalProperties"] = False
+            
+            # Recursively process nested schemas
+            for key, value in schema_dict.items():
+                if key in ["properties", "items", "anyOf", "allOf", "oneOf"]:
+                    if isinstance(value, dict):
+                        self._ensure_additional_properties_false(value)
+                    elif isinstance(value, list):
+                        for item in value:
+                            if isinstance(item, dict):
+                                self._ensure_additional_properties_false(item)
+                elif isinstance(value, dict):
+                    self._ensure_additional_properties_false(value)
+    
     def extract_with_custom_schema(
         self,
         text: str,
@@ -106,6 +128,9 @@ class StructuredExtractor:
         """
         try:
             self.logger.info("Starting extraction with custom schema")
+            
+            # Ensure custom schema has additionalProperties: false
+            self._ensure_additional_properties_false(schema_dict)
             
             response = self.client.chat.completions.create(
                 model=self.config.openai_model,
