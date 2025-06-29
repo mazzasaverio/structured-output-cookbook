@@ -8,7 +8,7 @@ from .event import EventSchema
 
 __all__ = [
     "JobDescriptionSchema",
-    "RecipeSchema", 
+    "RecipeSchema",
     "ProductReviewSchema",
     "EmailSchema",
     "EventSchema",

@@ -7,7 +7,7 @@ from ..schemas.base import BaseSchema
 
 class JobDescriptionSchema(BaseSchema):
     """Extract structured information from job descriptions."""
-    
+
     title: str = Field(description="Job title or position name")
     company: str = Field(description="Company name")
     location: Union[str, None] = Field(description="Job location")
@@ -23,22 +23,16 @@ class JobDescriptionSchema(BaseSchema):
     required_skills: List[str] = Field(
         description="Required technical skills and technologies"
     )
-    preferred_skills: List[str] = Field(
-        description="Preferred or nice-to-have skills"
-    )
+    preferred_skills: List[str] = Field(description="Preferred or nice-to-have skills")
     responsibilities: List[str] = Field(
         description="Key job responsibilities and duties"
     )
-    requirements: List[str] = Field(
-        description="Job requirements and qualifications"
-    )
-    benefits: List[str] = Field(
-        description="Benefits and perks offered"
-    )
+    requirements: List[str] = Field(description="Job requirements and qualifications")
+    benefits: List[str] = Field(description="Benefits and perks offered")
     remote_work: Union[bool, None] = Field(
         description="Whether remote work is available"
     )
-    
+
     @classmethod
     def get_extraction_prompt(cls) -> str:
         return """

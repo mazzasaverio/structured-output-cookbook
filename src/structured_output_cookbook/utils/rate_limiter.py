@@ -13,10 +13,10 @@ from .logger import get_logger
 
 class RateLimiter:
     """Simple rate limiter using sliding window."""
-    
+
     def __init__(self, requests_per_minute: int = 60):
         """Initialize rate limiter.
-        
+
         Args:
             requests_per_minute: Maximum requests per minute allowed
         """
@@ -24,10 +24,10 @@ class RateLimiter:
         self.requests = deque()
         self.lock = threading.Lock()
         self.logger = get_logger(__name__)
-    
+
     def acquire(self) -> bool:
         """Try to acquire a slot for making a request.
-        
+
         Returns:
             True if request can be made, False if rate limited
         """
@@ -36,14 +36,16 @@ class RateLimiter:
             # Remove requests older than 1 minute
             while self.requests and self.requests[0] < now - 60:
                 self.requests.popleft()
-            
+
             if len(self.requests) >= self.requests_per_minute:
-                self.logger.warning(f"Rate limit exceeded: {len(self.requests)}/{self.requests_per_minute} RPM")
+                self.logger.warning(
+                    f"Rate limit exceeded: {len(self.requests)}/{self.requests_per_minute} RPM"
+                )
                 return False
-            
+
             self.requests.append(now)
             return True
-    
+
     def wait_if_needed(self) -> None:
         """Wait until a request slot becomes available."""
         while not self.acquire():
@@ -57,10 +59,10 @@ class RateLimiter:
 
 class SimpleCache:
     """Simple in-memory cache with TTL."""
-    
+
     def __init__(self, ttl_seconds: int = 3600):
         """Initialize cache.
-        
+
         Args:
             ttl_seconds: Time to live for cache entries in seconds
         """
@@ -68,26 +70,30 @@ class SimpleCache:
         self.cache: Dict[str, Tuple[Any, float]] = {}
         self.lock = threading.Lock()
         self.logger = get_logger(__name__)
-    
-    def _generate_key(self, text: str, schema_name: str, model: str, temperature: float) -> str:
+
+    def _generate_key(
+        self, text: str, schema_name: str, model: str, temperature: float
+    ) -> str:
         """Generate cache key from extraction parameters."""
         content = f"{text}:{schema_name}:{model}:{temperature}"
         return hashlib.sha256(content.encode()).hexdigest()
-    
-    def get(self, text: str, schema_name: str, model: str, temperature: float) -> Optional[Dict[str, Any]]:
+
+    def get(
+        self, text: str, schema_name: str, model: str, temperature: float
+    ) -> Optional[Dict[str, Any]]:
         """Get cached result if available and not expired.
-        
+
         Args:
             text: Input text
             schema_name: Schema identifier
             model: OpenAI model name
             temperature: Model temperature
-            
+
         Returns:
             Cached result or None if not found/expired
         """
         key = self._generate_key(text, schema_name, model, temperature)
-        
+
         with self.lock:
             if key in self.cache:
                 result, timestamp = self.cache[key]
@@ -98,47 +104,54 @@ class SimpleCache:
                     # Expired, remove it
                     del self.cache[key]
                     self.logger.debug(f"Cache expired for key: {key[:16]}...")
-        
+
         return None
-    
-    def set(self, text: str, schema_name: str, model: str, temperature: float, result: Dict[str, Any]) -> None:
+
+    def set(
+        self,
+        text: str,
+        schema_name: str,
+        model: str,
+        temperature: float,
+        result: Dict[str, Any],
+    ) -> None:
         """Store result in cache.
-        
+
         Args:
             text: Input text
-            schema_name: Schema identifier  
+            schema_name: Schema identifier
             model: OpenAI model name
             temperature: Model temperature
             result: Result to cache
         """
         key = self._generate_key(text, schema_name, model, temperature)
-        
+
         with self.lock:
             self.cache[key] = (result, time.time())
             self.logger.debug(f"Cached result for key: {key[:16]}...")
-    
+
     def clear_expired(self) -> int:
         """Clear expired entries from cache.
-        
+
         Returns:
             Number of entries cleared
         """
         now = time.time()
         expired_keys = []
-        
+
         with self.lock:
             for key, (_, timestamp) in self.cache.items():
                 if now - timestamp >= self.ttl_seconds:
                     expired_keys.append(key)
-            
+
             for key in expired_keys:
                 del self.cache[key]
-        
+
         if expired_keys:
             self.logger.info(f"Cleared {len(expired_keys)} expired cache entries")
-        
+
         return len(expired_keys)
-    
+
     def clear_all(self) -> None:
         """Clear all cache entries."""
         with self.lock:
@@ -146,18 +159,21 @@ class SimpleCache:
             self.cache.clear()
             if count > 0:
                 self.logger.info(f"Cleared all {count} cache entries")
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         with self.lock:
             now = time.time()
             total_entries = len(self.cache)
-            expired_entries = sum(1 for _, timestamp in self.cache.values() 
-                                if now - timestamp >= self.ttl_seconds)
-            
+            expired_entries = sum(
+                1
+                for _, timestamp in self.cache.values()
+                if now - timestamp >= self.ttl_seconds
+            )
+
             return {
                 "total_entries": total_entries,
                 "active_entries": total_entries - expired_entries,
                 "expired_entries": expired_entries,
-                "ttl_seconds": self.ttl_seconds
-            } 
+                "ttl_seconds": self.ttl_seconds,
+            }

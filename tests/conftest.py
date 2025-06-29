@@ -11,9 +11,9 @@ def setup_test_env():
     # Set minimal required environment variables for tests
     test_env = {
         "OPENAI_API_KEY": "sk-test123456789abcdef",
-        "LOG_LEVEL": "WARNING"  # Reduce noise in tests
+        "LOG_LEVEL": "WARNING",  # Reduce noise in tests
     }
-    
+
     with patch.dict(os.environ, test_env):
         yield
 
@@ -90,4 +90,4 @@ def sample_news_text():
     The new device, starting at $999, will be available for pre-order this Friday.
     Industry analysts predict strong sales, with some calling it "the most significant
     iPhone upgrade in years."
-    """ 
+    """

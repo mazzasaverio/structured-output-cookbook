@@ -7,7 +7,7 @@ from ..schemas.base import BaseSchema
 
 class EmailSchema(BaseSchema):
     """Extract structured information from emails."""
-    
+
     # Email metadata
     subject: Union[str, None] = Field(description="Email subject line")
     sender_name: Union[str, None] = Field(description="Name of the sender")
@@ -16,42 +16,56 @@ class EmailSchema(BaseSchema):
     recipient_emails: List[str] = Field(description="Email addresses of recipients")
     cc_emails: List[str] = Field(description="CC email addresses")
     bcc_emails: List[str] = Field(description="BCC email addresses if visible")
-    
+
     # Email classification
-    email_type: Union[str, None] = Field(description="Type of email: business, personal, marketing, support, etc.")
+    email_type: Union[str, None] = Field(
+        description="Type of email: business, personal, marketing, support, etc."
+    )
     priority: Union[str, None] = Field(description="Priority level: high, medium, low")
-    category: Union[str, None] = Field(description="Category: inquiry, complaint, order, meeting, etc.")
-    
+    category: Union[str, None] = Field(
+        description="Category: inquiry, complaint, order, meeting, etc."
+    )
+
     # Content analysis
     main_topic: Union[str, None] = Field(description="Main topic or subject matter")
     summary: Union[str, None] = Field(description="Brief summary of the email content")
     key_points: List[str] = Field(description="Key points or important information")
     action_items: List[str] = Field(description="Action items or tasks mentioned")
-    
+
     # Requests and responses
     questions_asked: List[str] = Field(description="Questions asked in the email")
     requests_made: List[str] = Field(description="Specific requests made")
     deadlines_mentioned: List[str] = Field(description="Deadlines or dates mentioned")
-    
+
     # Contact information
     phone_numbers: List[str] = Field(description="Phone numbers mentioned")
     addresses: List[str] = Field(description="Physical addresses mentioned")
     websites_urls: List[str] = Field(description="Websites or URLs mentioned")
-    
+
     # Business context
     company_names: List[str] = Field(description="Company names mentioned")
     product_services: List[str] = Field(description="Products or services mentioned")
-    amounts_prices: List[str] = Field(description="Monetary amounts or prices mentioned")
-    
+    amounts_prices: List[str] = Field(
+        description="Monetary amounts or prices mentioned"
+    )
+
     # Sentiment and tone
-    sentiment: Union[str, None] = Field(description="Overall sentiment: positive, negative, neutral")
-    tone: Union[str, None] = Field(description="Tone: formal, informal, urgent, friendly, etc.")
-    
+    sentiment: Union[str, None] = Field(
+        description="Overall sentiment: positive, negative, neutral"
+    )
+    tone: Union[str, None] = Field(
+        description="Tone: formal, informal, urgent, friendly, etc."
+    )
+
     # Response requirements
-    requires_response: Union[bool, None] = Field(description="Whether the email requires a response")
+    requires_response: Union[bool, None] = Field(
+        description="Whether the email requires a response"
+    )
     response_urgency: Union[str, None] = Field(description="Urgency of response needed")
-    suggested_response_points: List[str] = Field(description="Key points to address in response")
-    
+    suggested_response_points: List[str] = Field(
+        description="Key points to address in response"
+    )
+
     @classmethod
     def get_extraction_prompt(cls) -> str:
         return """
@@ -67,4 +81,4 @@ class EmailSchema(BaseSchema):
         If information is not present, leave fields empty or null.
         Extract all relevant items for list fields.
         Be careful to distinguish between actual content and email signatures.
-        """.strip() 
+        """.strip()
