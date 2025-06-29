@@ -144,6 +144,9 @@ clean: ## Clean up build artifacts and cache
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
+clean-all: clean clean-dist ## Clean everything including distribution files
+	@echo "🧹 Deep cleaning complete!"
+
 clean-docker: ## Clean up Docker images and containers
 	@echo "🐳 Cleaning up Docker..."
 	docker system prune -f
@@ -173,7 +176,39 @@ check-env: ## Check if required environment variables are set
 		echo "✅ OPENAI_API_KEY is set"; \
 	fi
 
-# Release
+# Release Management
+bump-version: ## Bump version and create release (usage: make bump-version VERSION=0.1.0)
+	@if [ -z "$(VERSION)" ]; then \
+		echo "❌ Please specify VERSION. Usage: make bump-version VERSION=0.1.0"; \
+		exit 1; \
+	fi
+	./scripts/release.sh $(VERSION)
+
+build-package: ## Build package for PyPI
+	@echo "📦 Building package..."
+	uv build
+	uvx twine check dist/*
+
+test-pypi: ## Upload to Test PyPI
+	@echo "🧪 Uploading to Test PyPI..."
+	uvx twine upload --repository testpypi dist/*
+
+upload-pypi: ## Upload to PyPI (manual backup)
+	@echo "📤 Uploading to PyPI..."
+	uvx twine upload dist/*
+
+check-release: ## Check if package is ready for release
+	@echo "🔍 Checking release readiness..."
+	uv build
+	uvx twine check dist/*
+	uv run pytest
+	@echo "✅ Package ready for release!"
+
+clean-dist: ## Clean distribution files
+	@echo "🧹 Cleaning distribution files..."
+	rm -rf dist/ build/ *.egg-info/
+
+# Release (legacy)
 build: ## Build the package
 	@echo "📦 Building package..."
 	uv build

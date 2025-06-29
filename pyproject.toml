@@ -1,22 +1,37 @@
 [project]
 name = "structured-output-cookbook"
-version = "0.1.0"
-description = "LLM-powered structured output extraction with predefined and custom schemas"
+dynamic = ["version"]
+description = "Extract structured data from text using LLMs with ready-to-use templates"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 authors = [
     { name = "Saverio Mazza", email = "saverio3107@gmail.com" }
 ]
+maintainers = [
+    { name = "Saverio Mazza", email = "saverio3107@gmail.com" }
+]
 license = { text = "MIT" }
-keywords = ["llm", "structured-output", "extraction", "ai", "openai"]
+keywords = [
+    "openai", "llm", "data-extraction", "text-processing", 
+    "structured-data", "templates", "pydantic", "json-extraction",
+    "nlp", "automation", "api-wrapper"
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Data Scientists",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Linguistic",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Office/Business",
+    "Topic :: Utilities",
 ]
 
 dependencies = [
@@ -51,11 +66,20 @@ structured-output = "structured_output_cookbook.cli:main"
 [project.urls]
 Homepage = "https://github.com/mazzasaverio/structured-output-cookbook"
 Repository = "https://github.com/mazzasaverio/structured-output-cookbook"
-Issues = "https://github.com/mazzasaverio/structured-output-cookbook/issues"
+Documentation = "https://github.com/mazzasaverio/structured-output-cookbook#readme"
+"Bug Tracker" = "https://github.com/mazzasaverio/structured-output-cookbook/issues"
+Changelog = "https://github.com/mazzasaverio/structured-output-cookbook/blob/main/CHANGELOG.md"
+"Source Code" = "https://github.com/mazzasaverio/structured-output-cookbook"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/structured_output_cookbook/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/structured_output_cookbook"]
 
 [tool.uv]
 dev-dependencies = [
