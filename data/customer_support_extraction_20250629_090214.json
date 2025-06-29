@@ -1,0 +1,19 @@
+{
+  "ticket_id": null,
+  "customer_name": "Sarah Johnson",
+  "customer_email": "sarah.johnson@techcorp.com",
+  "issue_category": "technical",
+  "priority_level": "high",
+  "product_service": "API",
+  "issue_summary": "Request for extension on API migration deadline due to critical issues.",
+  "detailed_description": "The development team has encountered several critical issues during the migration process, including database schema conflicts, authentication system incompatibilities, failures with third-party integrations, and performance degradation in the staging environment.",
+  "steps_to_reproduce": [],
+  "resolution_status": "open",
+  "actions_taken": [
+    "Requested a 2-week extension for the API migration deadline",
+    "Scheduled an emergency team meeting for March 16th",
+    "Requested an extended testing period for the new authentication system",
+    "Coordination with DevOps team for infrastructure scaling"
+  ],
+  "escalation_needed": false
+}

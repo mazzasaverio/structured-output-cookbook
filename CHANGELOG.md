@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fix CI/CD build command from `uvx build` to `uv build`
 - Update GitHub Actions workflow for proper package building
+- Update Docker documentation with correct CLI parameters (`--input-file` not `--file`)
+- Remove obsolete `version` field from docker-compose.yml
+
+### Documentation  
+- Add comprehensive Docker usage guide (DOCKER_USAGE.md) with correct CLI syntax
+- Fix common CLI parameter mistakes in examples
 
 ### Technical
 - Remove unnecessary `uv tool install build` from CI pipeline
