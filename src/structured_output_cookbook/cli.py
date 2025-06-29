@@ -9,7 +9,7 @@ from typing import Optional
 import click
 from .config import Config
 from .extractor import StructuredExtractor
-from .logger import setup_logger, get_logger
+from .utils import setup_logger, get_logger, SchemaLoader
 from .templates.job_description import JobDescriptionSchema
 from .templates.recipe import RecipeSchema
 
@@ -70,9 +70,26 @@ def main(ctx: click.Context, debug: bool) -> None:
 @main.command()
 def list_templates() -> None:
     """List available predefined templates."""
-    click.echo("Available templates:")
+    click.echo("Available predefined templates:")
     for name, schema in TEMPLATES.items():
         click.echo(f"  {name}: {schema.get_schema_description()}")
+
+
+@main.command()
+@click.option("--config-dir", default="config/schemas", help="Directory containing YAML schema files")
+def list_schemas(config_dir: str) -> None:
+    """List available custom YAML schemas."""
+    loader = SchemaLoader(config_dir)
+    schemas = loader.list_schemas_with_descriptions()
+    
+    if not schemas:
+        click.echo(f"No custom schemas found in {config_dir}")
+        click.echo("Create .yaml files in the config directory to add custom schemas.")
+        return
+    
+    click.echo("Available custom schemas:")
+    for name, description in schemas:
+        click.echo(f"  {name}: {description}")
 
 
 @main.command()
@@ -144,46 +161,40 @@ def extract(
 
 
 @main.command()
-@click.option("--schema-file", "-s", type=click.Path(exists=True), required=True, help="JSON schema file")
-@click.option("--prompt-file", "-p", type=click.Path(exists=True), help="System prompt file")
-@click.option("--prompt", help="System prompt text")
+@click.argument("schema_name")
 @click.option("--input-file", "-i", type=click.Path(exists=True), help="Input text file")
 @click.option("--text", "-t", help="Input text directly")
 @click.option("--output", "-o", type=click.Path(), help="Output JSON file (default: auto-generated in data/)")
 @click.option("--data-dir", default="data", help="Directory for auto-generated outputs")
+@click.option("--config-dir", default="config/schemas", help="Directory containing YAML schema files")
 @click.option("--pretty", is_flag=True, help="Pretty print JSON output")
 @click.option("--no-save", is_flag=True, help="Don't save to file, only print to stdout")
 @click.pass_context
 def extract_custom(
     ctx: click.Context,
-    schema_file: str,
-    prompt_file: Optional[str],
-    prompt: Optional[str],
+    schema_name: str,
     input_file: Optional[str],
     text: Optional[str],
     output: Optional[str],
     data_dir: str,
+    config_dir: str,
     pretty: bool,
     no_save: bool
 ) -> None:
-    """Extract data using a custom JSON schema."""
+    """Extract data using a custom YAML schema."""
     logger = ctx.obj["logger"]
     config = ctx.obj["config"]
     
-    # Load schema
+    # Load YAML schema
+    loader = SchemaLoader(config_dir)
     try:
-        schema_dict = json.loads(Path(schema_file).read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, FileNotFoundError) as e:
-        click.echo(f"Error loading schema: {e}", err=True)
+        yaml_schema = loader.load_schema(schema_name)
+    except FileNotFoundError:
+        click.echo(f"Schema '{schema_name}' not found in {config_dir}", err=True)
+        click.echo("Use 'list-schemas' command to see available schemas.", err=True)
         sys.exit(1)
-    
-    # Get system prompt
-    if prompt_file:
-        system_prompt = Path(prompt_file).read_text(encoding="utf-8")
-    elif prompt:
-        system_prompt = prompt
-    else:
-        click.echo("Error: Must provide either --prompt-file or --prompt", err=True)
+    except Exception as e:
+        click.echo(f"Error loading schema '{schema_name}': {e}", err=True)
         sys.exit(1)
     
     # Get input text
@@ -198,8 +209,8 @@ def extract_custom(
     # Extract data
     extractor = StructuredExtractor(config)
     
-    logger.info("Extracting using custom schema")
-    result = extractor.extract_with_custom_schema(input_text, schema_dict, system_prompt)
+    logger.info(f"Extracting using custom schema: {schema_name}")
+    result = extractor.extract_with_yaml_schema(input_text, yaml_schema)
     
     if not result.success:
         click.echo(f"Extraction failed: {result.error}", err=True)
@@ -216,7 +227,7 @@ def extract_custom(
     
     # Save to file unless --no-save is specified
     if not no_save:
-        save_path = save_extraction_result(result.data, "custom", output, data_dir)
+        save_path = save_extraction_result(result.data, schema_name, output, data_dir)
         click.echo(f"✅ Results saved to {save_path}")
     
     # Always print to stdout if no output file specified or if pretty print requested

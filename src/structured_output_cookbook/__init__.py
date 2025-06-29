@@ -5,6 +5,7 @@ __author__ = "Your Name"
 
 from .extractor import StructuredExtractor
 from .schemas.base import BaseSchema, ExtractionResult
+from .utils import SchemaLoader, YamlSchema
 from .templates.job_description import JobDescriptionSchema
 from .templates.recipe import RecipeSchema
 from .config import Config
@@ -13,6 +14,8 @@ __all__ = [
     "StructuredExtractor",
     "BaseSchema",
     "ExtractionResult", 
+    "SchemaLoader",
+    "YamlSchema",
     "JobDescriptionSchema",
     "RecipeSchema",
     "Config",

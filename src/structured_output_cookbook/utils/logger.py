@@ -2,7 +2,7 @@
 
 import sys
 from loguru import logger
-from .config import Config
+from ..config import Config
 
 
 def setup_logger(config: Config) -> None:

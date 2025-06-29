@@ -6,8 +6,9 @@ from openai import OpenAI
 from pydantic import ValidationError
 
 from .config import Config
-from .logger import get_logger
+from .utils import get_logger
 from .schemas.base import BaseSchema, ExtractionResult
+from .utils import YamlSchema
 
 
 class StructuredExtractor:
@@ -26,7 +27,7 @@ class StructuredExtractor:
         system_prompt: Optional[str] = None
     ) -> ExtractionResult:
         """
-        Extract structured data from text using the provided schema.
+        Extract structured data from text using a predefined Pydantic schema.
         
         Args:
             text: Input text to extract from
@@ -91,6 +92,67 @@ class StructuredExtractor:
             self.logger.error(f"Extraction failed: {e}")
             return ExtractionResult.error_result(str(e))
     
+    def extract_with_yaml_schema(
+        self,
+        text: str,
+        yaml_schema: YamlSchema
+    ) -> ExtractionResult:
+        """
+        Extract structured data from text using a YAML schema configuration.
+        
+        Args:
+            text: Input text to extract from
+            yaml_schema: YamlSchema object containing schema and prompt
+            
+        Returns:
+            ExtractionResult with success status and extracted data
+        """
+        try:
+            self.logger.info(f"Starting extraction with YAML schema: {yaml_schema.name}")
+            
+            # Ensure schema has additionalProperties: false
+            schema_dict = yaml_schema.schema.copy()
+            self._ensure_additional_properties_false(schema_dict)
+            
+            response = self.client.chat.completions.create(
+                model=self.config.openai_model,
+                messages=[
+                    {"role": "system", "content": yaml_schema.system_prompt},
+                    {"role": "user", "content": text}
+                ],
+                response_format={
+                    "type": "json_schema", 
+                    "json_schema": {
+                        "name": yaml_schema.name.lower().replace(" ", "_"),
+                        "strict": True,
+                        "schema": schema_dict
+                    }
+                },
+                timeout=self.config.timeout_seconds
+            )
+            
+            content = response.choices[0].message.content
+            if not content:
+                return ExtractionResult.error_result("Empty response from LLM")
+            
+            try:
+                data = json.loads(content)
+                self.logger.info("YAML schema extraction completed successfully")
+                
+                return ExtractionResult.success_result(
+                    data=data,
+                    model_used=response.model,
+                    tokens_used=response.usage.total_tokens if response.usage else None
+                )
+                
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Failed to parse JSON response: {e}")
+                return ExtractionResult.error_result(f"Invalid JSON response: {str(e)}")
+                
+        except Exception as e:
+            self.logger.error(f"YAML schema extraction failed: {e}")
+            return ExtractionResult.error_result(str(e))
+    
     def _ensure_additional_properties_false(self, schema_dict: Dict[str, Any]) -> None:
         """Recursively ensure all objects have additionalProperties: false."""
         if isinstance(schema_dict, dict):
@@ -108,65 +170,3 @@ class StructuredExtractor:
                                 self._ensure_additional_properties_false(item)
                 elif isinstance(value, dict):
                     self._ensure_additional_properties_false(value)
-    
-    def extract_with_custom_schema(
-        self,
-        text: str,
-        schema_dict: Dict[str, Any],
-        system_prompt: str
-    ) -> ExtractionResult:
-        """
-        Extract data using a custom JSON schema dictionary.
-        
-        Args:
-            text: Input text to extract from
-            schema_dict: JSON schema as dictionary
-            system_prompt: System prompt for extraction
-            
-        Returns:
-            ExtractionResult with success status and extracted data
-        """
-        try:
-            self.logger.info("Starting extraction with custom schema")
-            
-            # Ensure custom schema has additionalProperties: false
-            self._ensure_additional_properties_false(schema_dict)
-            
-            response = self.client.chat.completions.create(
-                model=self.config.openai_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": text}
-                ],
-                response_format={
-                    "type": "json_schema", 
-                    "json_schema": {
-                        "name": "custom_extraction",
-                        "strict": True,
-                        "schema": schema_dict
-                    }
-                },
-                timeout=self.config.timeout_seconds
-            )
-            
-            content = response.choices[0].message.content
-            if not content:
-                return ExtractionResult.error_result("Empty response from LLM")
-            
-            try:
-                data = json.loads(content)
-                self.logger.info("Custom extraction completed successfully")
-                
-                return ExtractionResult.success_result(
-                    data=data,
-                    model_used=response.model,
-                    tokens_used=response.usage.total_tokens if response.usage else None
-                )
-                
-            except json.JSONDecodeError as e:
-                self.logger.error(f"Failed to parse JSON response: {e}")
-                return ExtractionResult.error_result(f"Invalid JSON response: {str(e)}")
-                
-        except Exception as e:
-            self.logger.error(f"Custom extraction failed: {e}")
-            return ExtractionResult.error_result(str(e))
