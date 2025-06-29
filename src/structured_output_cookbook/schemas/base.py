@@ -1,7 +1,7 @@
 """Base schema definitions for structured output extraction."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -20,7 +20,6 @@ class BaseSchema(BaseModel, ABC):
     @abstractmethod
     def get_extraction_prompt(cls) -> str:
         """Return the prompt to use for extraction with this schema."""
-        pass
 
     @classmethod
     def get_schema_name(cls) -> str:
@@ -37,7 +36,7 @@ class ExtractionResult(BaseModel):
     """Result wrapper for extraction operations."""
 
     success: bool
-    data: Dict[str, Any] | None = None
+    data: dict[str, Any] | None = None
     error: str | None = None
     model_used: str | None = None
     tokens_used: int | None = None
@@ -45,13 +44,16 @@ class ExtractionResult(BaseModel):
     @classmethod
     def success_result(
         cls,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         model_used: str | None = None,
         tokens_used: int | None = None,
     ) -> "ExtractionResult":
         """Create a successful extraction result."""
         return cls(
-            success=True, data=data, model_used=model_used, tokens_used=tokens_used
+            success=True,
+            data=data,
+            model_used=model_used,
+            tokens_used=tokens_used,
         )
 
     @classmethod

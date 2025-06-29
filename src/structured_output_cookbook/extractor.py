@@ -2,20 +2,27 @@
 
 import json
 import time
-from typing import Type, Dict, Any, Optional, List
-from openai import OpenAI, APIError, RateLimitError, APITimeoutError
+from typing import Any
+
+from openai import APIError, APITimeoutError, OpenAI, RateLimitError
 from pydantic import ValidationError
 
 from .config import Config
-from .utils import get_logger, RateLimiter, SimpleCache, CostTracker, TokenUsage
 from .schemas.base import BaseSchema, ExtractionResult
-from .utils import YamlSchema
+from .utils import (
+    CostTracker,
+    RateLimiter,
+    SimpleCache,
+    TokenUsage,
+    YamlSchema,
+    get_logger,
+)
 
 
 class StructuredExtractor:
     """Main extractor class using OpenAI's structured outputs."""
 
-    def __init__(self, config: Optional[Config] = None):
+    def __init__(self, config: Config | None = None):
         """Initialize the extractor with configuration."""
         self.config = config or Config.from_env()
         self.client = OpenAI(api_key=self.config.openai_api_key)
@@ -38,7 +45,10 @@ class StructuredExtractor:
         self.logger.info(f"Extractor initialized with config: {self.config.to_dict()}")
 
     def extract(
-        self, text: str, schema: Type[BaseSchema], system_prompt: Optional[str] = None
+        self,
+        text: str,
+        schema: type[BaseSchema],
+        system_prompt: str | None = None,
     ) -> ExtractionResult:
         """
         Extract structured data from text using a predefined Pydantic schema.
@@ -62,7 +72,10 @@ class StructuredExtractor:
         # Check cache first
         if self.cache:
             cached_result = self.cache.get(
-                text, schema_name, self.config.openai_model, self.config.temperature
+                text,
+                schema_name,
+                self.config.openai_model,
+                self.config.temperature,
             )
             if cached_result:
                 self.logger.info("Returning cached result")
@@ -86,7 +99,7 @@ class StructuredExtractor:
                 self.rate_limiter.wait_if_needed()
 
                 self.logger.debug(
-                    f"Attempt {attempt + 1}/{self.config.max_retries + 1}"
+                    f"Attempt {attempt + 1}/{self.config.max_retries + 1}",
                 )
 
                 response = self.client.chat.completions.create(
@@ -113,11 +126,11 @@ class StructuredExtractor:
                 if not content:
                     if attempt < self.config.max_retries:
                         self.logger.warning(
-                            f"Empty response, retrying... (attempt {attempt + 1})"
+                            f"Empty response, retrying... (attempt {attempt + 1})",
                         )
                         continue
                     return ExtractionResult.error_result(
-                        "Empty response from LLM after all retries"
+                        "Empty response from LLM after all retries",
                     )
 
                 # Parse JSON and validate with schema
@@ -133,7 +146,9 @@ class StructuredExtractor:
                             total_tokens=response.usage.total_tokens,
                         )
                         self.cost_tracker.track_request(
-                            response.model, usage, schema_name
+                            response.model,
+                            usage,
+                            schema_name,
                         )
 
                     # Cache the result
@@ -159,14 +174,14 @@ class StructuredExtractor:
                 except (json.JSONDecodeError, ValidationError) as e:
                     if attempt < self.config.max_retries:
                         self.logger.warning(
-                            f"Failed to parse/validate response, retrying... Error: {e}"
+                            f"Failed to parse/validate response, retrying... Error: {e}",
                         )
                         continue
                     self.logger.error(
-                        f"Failed to parse/validate response after all retries: {e}"
+                        f"Failed to parse/validate response after all retries: {e}",
                     )
                     return ExtractionResult.error_result(
-                        f"Invalid response format: {str(e)}"
+                        f"Invalid response format: {e!s}",
                     )
 
             except RateLimitError as e:
@@ -179,21 +194,23 @@ class StructuredExtractor:
                     self.logger.warning(f"API timeout, retrying... {e}")
                     continue
                 self.logger.error(f"API timeout after all retries: {e}")
-                return ExtractionResult.error_result(f"API timeout: {str(e)}")
+                return ExtractionResult.error_result(f"API timeout: {e!s}")
 
             except APIError as e:
                 # Check if it's a retryable error
                 retryable = hasattr(e, "status_code") and getattr(
-                    e, "status_code", 0
+                    e,
+                    "status_code",
+                    0,
                 ) in [500, 502, 503, 504]
                 if attempt < self.config.max_retries and retryable:
                     self.logger.warning(
-                        f"API error {getattr(e, 'status_code', 'unknown')}, retrying... {e}"
+                        f"API error {getattr(e, 'status_code', 'unknown')}, retrying... {e}",
                     )
                     time.sleep(2**attempt)  # Exponential backoff
                     continue
                 self.logger.error(f"API error: {e}")
-                return ExtractionResult.error_result(f"API error: {str(e)}")
+                return ExtractionResult.error_result(f"API error: {e!s}")
 
             except Exception as e:
                 if attempt < self.config.max_retries:
@@ -204,7 +221,7 @@ class StructuredExtractor:
 
         return ExtractionResult.error_result("Max retries exceeded")
 
-    def _validate_input(self, text: str) -> Optional[str]:
+    def _validate_input(self, text: str) -> str | None:
         """Validate input text.
 
         Args:
@@ -226,7 +243,9 @@ class StructuredExtractor:
         return None
 
     def extract_with_yaml_schema(
-        self, text: str, yaml_schema: YamlSchema
+        self,
+        text: str,
+        yaml_schema: YamlSchema,
     ) -> ExtractionResult:
         """
         Extract structured data from text using a YAML schema configuration.
@@ -240,7 +259,7 @@ class StructuredExtractor:
         """
         try:
             self.logger.info(
-                f"Starting extraction with YAML schema: {yaml_schema.name}"
+                f"Starting extraction with YAML schema: {yaml_schema.name}",
             )
 
             # Ensure schema has additionalProperties: false
@@ -280,13 +299,13 @@ class StructuredExtractor:
 
             except json.JSONDecodeError as e:
                 self.logger.error(f"Failed to parse JSON response: {e}")
-                return ExtractionResult.error_result(f"Invalid JSON response: {str(e)}")
+                return ExtractionResult.error_result(f"Invalid JSON response: {e!s}")
 
         except Exception as e:
             self.logger.error(f"YAML schema extraction failed: {e}")
             return ExtractionResult.error_result(str(e))
 
-    def _ensure_additional_properties_false(self, schema_dict: Dict[str, Any]) -> None:
+    def _ensure_additional_properties_false(self, schema_dict: dict[str, Any]) -> None:
         """Recursively ensure all objects have additionalProperties: false."""
         if isinstance(schema_dict, dict):
             if schema_dict.get("type") == "object":

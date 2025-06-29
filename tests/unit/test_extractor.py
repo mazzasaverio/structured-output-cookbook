@@ -1,13 +1,13 @@
 """Test cases for extractor module."""
 
 import json
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from openai import RateLimitError, APITimeoutError, APIError
+from openai import APITimeoutError, RateLimitError
 
 from structured_output_cookbook.config import Config
 from structured_output_cookbook.extractor import StructuredExtractor
-from structured_output_cookbook.schemas.base import ExtractionResult
 from structured_output_cookbook.templates.recipe import RecipeSchema
 
 
@@ -88,7 +88,7 @@ class TestStructuredExtractor:
             "total_time": "45 minutes",
             "servings": 4,
             "ingredients": [
-                {"name": "flour", "quantity": "2", "unit": "cups", "notes": None}
+                {"name": "flour", "quantity": "2", "unit": "cups", "notes": None},
             ],
             "instructions": ["Mix ingredients", "Cook until done"],
             "tags": ["vegetarian", "easy"],
@@ -107,7 +107,9 @@ class TestStructuredExtractor:
 
         # First call raises RateLimitError, second succeeds
         rate_limit_error = RateLimitError(
-            message="Rate limit exceeded", response=Mock(), body={}
+            message="Rate limit exceeded",
+            response=Mock(),
+            body={},
         )
         extractor.client.chat.completions.create.side_effect = [
             rate_limit_error,
@@ -138,7 +140,7 @@ class TestStructuredExtractor:
             "total_time": "45 minutes",
             "servings": 4,
             "ingredients": [
-                {"name": "flour", "quantity": "2", "unit": "cups", "notes": None}
+                {"name": "flour", "quantity": "2", "unit": "cups", "notes": None},
             ],
             "instructions": ["Mix ingredients", "Cook until done"],
             "tags": ["vegetarian", "easy"],

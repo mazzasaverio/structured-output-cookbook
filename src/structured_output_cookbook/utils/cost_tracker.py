@@ -1,9 +1,9 @@
 """Cost tracking utilities for OpenAI API calls."""
 
-from typing import Dict, NamedTuple, Optional
-from datetime import datetime
 import json
+from datetime import datetime
 from pathlib import Path
+from typing import Any, NamedTuple
 
 from .logger import get_logger
 
@@ -62,7 +62,7 @@ OPENAI_PRICING = {
 class CostTracker:
     """Track and calculate costs for OpenAI API usage."""
 
-    def __init__(self, pricing_data: Optional[Dict] = None):
+    def __init__(self, pricing_data: dict[str, Any] | None = None):
         """Initialize cost tracker.
 
         Args:
@@ -70,7 +70,7 @@ class CostTracker:
         """
         self.pricing = pricing_data or OPENAI_PRICING
         self.logger = get_logger(__name__)
-        self.session_costs = []
+        self.session_costs: list[dict[str, Any]] = []
 
     def calculate_cost(self, model: str, usage: TokenUsage) -> CostInfo:
         """Calculate cost for a given model and token usage.
@@ -87,7 +87,7 @@ class CostTracker:
 
         if model_key not in self.pricing:
             self.logger.warning(
-                f"Unknown model for pricing: {model}, using gpt-4o-mini pricing"
+                f"Unknown model for pricing: {model}, using gpt-4o-mini pricing",
             )
             model_key = "gpt-4o-mini"
 
@@ -109,19 +109,22 @@ class CostTracker:
         # Handle different model name formats
         if model.startswith("gpt-4o-mini"):
             return "gpt-4o-mini"
-        elif model.startswith("gpt-4o"):
+        if model.startswith("gpt-4o"):
             return "gpt-4o"
-        elif model.startswith("gpt-4-turbo"):
+        if model.startswith("gpt-4-turbo"):
             return "gpt-4-turbo"
-        elif model.startswith("gpt-4"):
+        if model.startswith("gpt-4"):
             return "gpt-4"
-        elif model.startswith("gpt-3.5"):
+        if model.startswith("gpt-3.5"):
             return "gpt-3.5-turbo"
 
         return model
 
     def track_request(
-        self, model: str, usage: TokenUsage, extraction_type: str = "unknown"
+        self,
+        model: str,
+        usage: TokenUsage,
+        extraction_type: str = "unknown",
     ) -> CostInfo:
         """Track a request and its cost.
 
@@ -143,17 +146,17 @@ class CostTracker:
                 "extraction_type": extraction_type,
                 "usage": usage._asdict(),
                 "cost": cost_info._asdict(),
-            }
+            },
         )
 
         self.logger.info(
             f"API call: {model} | Tokens: {usage.total_tokens} | "
-            f"Cost: ${cost_info.total_cost:.4f} | Type: {extraction_type}"
+            f"Cost: ${cost_info.total_cost:.4f} | Type: {extraction_type}",
         )
 
         return cost_info
 
-    def get_session_stats(self) -> Dict:
+    def get_session_stats(self) -> dict[str, Any]:
         """Get statistics for the current session.
 
         Returns:
@@ -172,7 +175,7 @@ class CostTracker:
         total_tokens = sum(req["usage"]["total_tokens"] for req in self.session_costs)
         models_used = list(set(req["model"] for req in self.session_costs))
         extraction_types = list(
-            set(req["extraction_type"] for req in self.session_costs)
+            set(req["extraction_type"] for req in self.session_costs),
         )
 
         return {
@@ -210,7 +213,10 @@ class CostTracker:
         self.session_costs.clear()
         self.logger.info("Session data cleared")
 
-    def get_model_recommendations(self, usage_pattern: Dict) -> Dict:
+    def get_model_recommendations(
+        self,
+        usage_pattern: dict[str, Any],
+    ) -> dict[str, Any]:
         """Get model recommendations based on usage patterns.
 
         Args:
@@ -221,10 +227,12 @@ class CostTracker:
         """
         avg_tokens = usage_pattern.get("avg_total_tokens", 1000)
         avg_prompt_tokens = usage_pattern.get(
-            "avg_prompt_tokens", int(avg_tokens * 0.8)
+            "avg_prompt_tokens",
+            int(avg_tokens * 0.8),
         )
         avg_completion_tokens = usage_pattern.get(
-            "avg_completion_tokens", int(avg_tokens * 0.2)
+            "avg_completion_tokens",
+            int(avg_tokens * 0.2),
         )
 
         usage = TokenUsage(

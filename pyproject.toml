@@ -96,6 +96,7 @@ dev-dependencies = [
     "pandas>=2.0.0",
     "seaborn>=0.12.0",
     "plotly>=5.15.0",
+    "types-pyyaml>=6.0.12.20250516",
 ]
 
 [tool.black]
@@ -115,6 +116,7 @@ ignore = [
     "ANN001",   # missing type annotation for function argument (tests)
     "ANN201",   # missing return type annotation for public function
     "ANN204",   # missing return type annotation for special method
+    "ANN401",   # dynamically typed expressions (typing.Any) disallowed
     "SLF001",   # private member access (needed for testing)
     "G004",     # logging statement uses f-string (acceptable)
     "TRY400",   # use logging.exception instead of logging.error

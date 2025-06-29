@@ -1,9 +1,10 @@
 """YAML schema loader for custom extraction schemas."""
 
-import yaml
-from pathlib import Path
-from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 from .logger import get_logger
 
@@ -15,7 +16,7 @@ class YamlSchema:
     name: str
     description: str
     system_prompt: str
-    schema: Dict[str, Any]
+    schema: dict[str, Any]
     filename: str
 
 
@@ -31,7 +32,7 @@ class SchemaLoader:
         self.config_dir = Path(config_dir)
         self.logger = get_logger(__name__)
 
-    def get_available_schemas(self) -> List[str]:
+    def get_available_schemas(self) -> list[str]:
         """Get list of available schema names (without .yaml extension).
 
         Returns:
@@ -41,11 +42,11 @@ class SchemaLoader:
             return []
 
         yaml_files = list(self.config_dir.glob("*.yaml")) + list(
-            self.config_dir.glob("*.yml")
+            self.config_dir.glob("*.yml"),
         )
         return [f.stem for f in yaml_files]
 
-    def list_schemas_with_descriptions(self) -> List[Tuple[str, str]]:
+    def list_schemas_with_descriptions(self) -> list[tuple[str, str]]:
         """Get list of available schemas with their descriptions.
 
         Returns:
@@ -90,11 +91,11 @@ class SchemaLoader:
 
         if not schema_path:
             raise FileNotFoundError(
-                f"Schema '{schema_name}' not found in {self.config_dir}"
+                f"Schema '{schema_name}' not found in {self.config_dir}",
             )
 
         try:
-            with open(schema_path, "r", encoding="utf-8") as f:
+            with open(schema_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             # Validate required fields
@@ -102,7 +103,7 @@ class SchemaLoader:
             for field in required_fields:
                 if field not in data:
                     raise KeyError(
-                        f"Required field '{field}' missing from schema {schema_name}"
+                        f"Required field '{field}' missing from schema {schema_name}",
                     )
 
             self.logger.info(f"Loaded schema: {schema_name}")
@@ -122,7 +123,7 @@ class SchemaLoader:
             self.logger.error(f"Error loading schema {schema_name}: {e}")
             raise
 
-    def validate_schema_structure(self, schema_name: str) -> Tuple[bool, Optional[str]]:
+    def validate_schema_structure(self, schema_name: str) -> tuple[bool, str | None]:
         """Validate that a schema has the correct structure.
 
         Args:

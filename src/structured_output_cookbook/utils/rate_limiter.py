@@ -1,12 +1,10 @@
 """Rate limiting and caching utilities."""
 
-import time
 import hashlib
-import json
-from typing import Dict, Any, Optional, Tuple
-from collections import defaultdict, deque
 import threading
-from datetime import datetime, timedelta
+import time
+from collections import deque
+from typing import Any, cast
 
 from .logger import get_logger
 
@@ -21,7 +19,7 @@ class RateLimiter:
             requests_per_minute: Maximum requests per minute allowed
         """
         self.requests_per_minute = requests_per_minute
-        self.requests = deque()
+        self.requests: deque[float] = deque()
         self.lock = threading.Lock()
         self.logger = get_logger(__name__)
 
@@ -39,7 +37,7 @@ class RateLimiter:
 
             if len(self.requests) >= self.requests_per_minute:
                 self.logger.warning(
-                    f"Rate limit exceeded: {len(self.requests)}/{self.requests_per_minute} RPM"
+                    f"Rate limit exceeded: {len(self.requests)}/{self.requests_per_minute} RPM",
                 )
                 return False
 
@@ -67,20 +65,28 @@ class SimpleCache:
             ttl_seconds: Time to live for cache entries in seconds
         """
         self.ttl_seconds = ttl_seconds
-        self.cache: Dict[str, Tuple[Any, float]] = {}
+        self.cache: dict[str, tuple[Any, float]] = {}
         self.lock = threading.Lock()
         self.logger = get_logger(__name__)
 
     def _generate_key(
-        self, text: str, schema_name: str, model: str, temperature: float
+        self,
+        text: str,
+        schema_name: str,
+        model: str,
+        temperature: float,
     ) -> str:
         """Generate cache key from extraction parameters."""
         content = f"{text}:{schema_name}:{model}:{temperature}"
         return hashlib.sha256(content.encode()).hexdigest()
 
     def get(
-        self, text: str, schema_name: str, model: str, temperature: float
-    ) -> Optional[Dict[str, Any]]:
+        self,
+        text: str,
+        schema_name: str,
+        model: str,
+        temperature: float,
+    ) -> dict[str, Any] | None:
         """Get cached result if available and not expired.
 
         Args:
@@ -99,11 +105,10 @@ class SimpleCache:
                 result, timestamp = self.cache[key]
                 if time.time() - timestamp < self.ttl_seconds:
                     self.logger.debug(f"Cache hit for key: {key[:16]}...")
-                    return result
-                else:
-                    # Expired, remove it
-                    del self.cache[key]
-                    self.logger.debug(f"Cache expired for key: {key[:16]}...")
+                    return cast("dict[str, Any]", result)
+                # Expired, remove it
+                del self.cache[key]
+                self.logger.debug(f"Cache expired for key: {key[:16]}...")
 
         return None
 
@@ -113,7 +118,7 @@ class SimpleCache:
         schema_name: str,
         model: str,
         temperature: float,
-        result: Dict[str, Any],
+        result: dict[str, Any],
     ) -> None:
         """Store result in cache.
 
@@ -160,7 +165,7 @@ class SimpleCache:
             if count > 0:
                 self.logger.info(f"Cleared all {count} cache entries")
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         with self.lock:
             now = time.time()

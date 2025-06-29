@@ -8,28 +8,28 @@ __description__ = (
 )
 __url__ = "https://github.com/mazzasaverio/structured-output-cookbook"
 
+from .config import Config
 from .extractor import StructuredExtractor
 from .schemas.base import BaseSchema, ExtractionResult
-from .utils import SchemaLoader, YamlSchema, setup_minimal_logger
-from .templates.job_description import JobDescriptionSchema
-from .templates.recipe import RecipeSchema
-from .templates.product_review import ProductReviewSchema
 from .templates.email import EmailSchema
 from .templates.event import EventSchema
-from .config import Config
+from .templates.job_description import JobDescriptionSchema
+from .templates.product_review import ProductReviewSchema
+from .templates.recipe import RecipeSchema
+from .utils import SchemaLoader, YamlSchema, setup_minimal_logger
 
 __all__ = [
-    "StructuredExtractor",
     "BaseSchema",
-    "ExtractionResult",
-    "SchemaLoader",
-    "YamlSchema",
-    "setup_minimal_logger",
-    "JobDescriptionSchema",
-    "RecipeSchema",
-    "ProductReviewSchema",
+    "Config",
     "EmailSchema",
     "EventSchema",
-    "Config",
+    "ExtractionResult",
+    "JobDescriptionSchema",
+    "ProductReviewSchema",
+    "RecipeSchema",
+    "SchemaLoader",
+    "StructuredExtractor",
+    "YamlSchema",
     "__version__",
+    "setup_minimal_logger",
 ]

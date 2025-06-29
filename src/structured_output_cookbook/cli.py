@@ -4,17 +4,18 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import click
+
 from .config import Config
 from .extractor import StructuredExtractor
-from .utils import setup_logger, get_logger, SchemaLoader
-from .templates.job_description import JobDescriptionSchema
-from .templates.recipe import RecipeSchema
-from .templates.product_review import ProductReviewSchema
 from .templates.email import EmailSchema
 from .templates.event import EventSchema
+from .templates.job_description import JobDescriptionSchema
+from .templates.product_review import ProductReviewSchema
+from .templates.recipe import RecipeSchema
+from .utils import SchemaLoader, get_logger, setup_logger
 
 # Available predefined templates
 TEMPLATES = {
@@ -27,9 +28,9 @@ TEMPLATES = {
 
 
 def save_extraction_result(
-    result_data: dict,
+    result_data: dict[str, Any],
     template_name: str,
-    output_path: Optional[str] = None,
+    output_path: str | None = None,
     data_dir: str = "data",
 ) -> str:
     """Save extraction result to file and return the path."""
@@ -50,7 +51,8 @@ def save_extraction_result(
 
     # Save the file
     save_path.write_text(
-        json.dumps(result_data, indent=2, ensure_ascii=False), encoding="utf-8"
+        json.dumps(result_data, indent=2, ensure_ascii=False),
+        encoding="utf-8",
     )
 
     return str(save_path)
@@ -77,7 +79,7 @@ def list_templates() -> None:
     """List available predefined templates."""
     click.echo("Available predefined templates:")
     for name, schema in TEMPLATES.items():
-        click.echo(f"  {name}: {schema.get_schema_description()}")
+        click.echo(f"  {name}: {schema.get_schema_description()}")  # type: ignore[attr-defined]
 
 
 @main.command()
@@ -104,7 +106,10 @@ def list_schemas(config_dir: str) -> None:
 @main.command()
 @click.argument("template", type=click.Choice(list(TEMPLATES.keys())))
 @click.option(
-    "--input-file", "-i", type=click.Path(exists=True), help="Input text file"
+    "--input-file",
+    "-i",
+    type=click.Path(exists=True),
+    help="Input text file",
 )
 @click.option("--text", "-t", help="Input text directly")
 @click.option(
@@ -116,15 +121,17 @@ def list_schemas(config_dir: str) -> None:
 @click.option("--data-dir", default="data", help="Directory for auto-generated outputs")
 @click.option("--pretty", is_flag=True, help="Pretty print JSON output")
 @click.option(
-    "--no-save", is_flag=True, help="Don't save to file, only print to stdout"
+    "--no-save",
+    is_flag=True,
+    help="Don't save to file, only print to stdout",
 )
 @click.pass_context
 def extract(
     ctx: click.Context,
     template: str,
-    input_file: Optional[str],
-    text: Optional[str],
-    output: Optional[str],
+    input_file: str | None,
+    text: str | None,
+    output: str | None,
     data_dir: str,
     pretty: bool,
     no_save: bool,
@@ -147,7 +154,7 @@ def extract(
     schema = TEMPLATES[template]
 
     logger.info(f"Extracting using template: {template}")
-    result = extractor.extract(input_text, schema)
+    result = extractor.extract(input_text, schema)  # type: ignore[arg-type]
 
     if not result.success:
         click.echo(f"Extraction failed: {result.error}", err=True)
@@ -183,14 +190,17 @@ def extract(
         else:
             click.echo(f"📊 Tokens used: {result.tokens_used}")
             click.echo(
-                f"💰 Estimated cost: ~${(result.tokens_used * 0.00001):.4f}"
+                f"💰 Estimated cost: ~${(result.tokens_used * 0.00001):.4f}",
             )  # Fallback
 
 
 @main.command()
 @click.argument("schema_name")
 @click.option(
-    "--input-file", "-i", type=click.Path(exists=True), help="Input text file"
+    "--input-file",
+    "-i",
+    type=click.Path(exists=True),
+    help="Input text file",
 )
 @click.option("--text", "-t", help="Input text directly")
 @click.option(
@@ -207,15 +217,17 @@ def extract(
 )
 @click.option("--pretty", is_flag=True, help="Pretty print JSON output")
 @click.option(
-    "--no-save", is_flag=True, help="Don't save to file, only print to stdout"
+    "--no-save",
+    is_flag=True,
+    help="Don't save to file, only print to stdout",
 )
 @click.pass_context
 def extract_custom(
     ctx: click.Context,
     schema_name: str,
-    input_file: Optional[str],
-    text: Optional[str],
-    output: Optional[str],
+    input_file: str | None,
+    text: str | None,
+    output: str | None,
     data_dir: str,
     config_dir: str,
     pretty: bool,
@@ -286,7 +298,7 @@ def extract_custom(
         else:
             click.echo(f"📊 Tokens used: {result.tokens_used}")
             click.echo(
-                f"💰 Estimated cost: ~${(result.tokens_used * 0.00001):.4f}"
+                f"💰 Estimated cost: ~${(result.tokens_used * 0.00001):.4f}",
             )  # Fallback
 
 
@@ -335,7 +347,7 @@ def session_stats(ctx: click.Context) -> None:
         click.echo("No API requests made in this session.")
         return
 
-    click.echo("📊 Session Statistics")
+    click.echo("�� Session Statistics")
     click.echo("=" * 30)
     click.echo(f"Total requests: {stats['total_requests']}")
     click.echo(f"Total tokens: {stats['total_tokens']:,}")
@@ -356,12 +368,15 @@ def session_stats(ctx: click.Context) -> None:
     help="Output directory for batch results",
 )
 @click.option(
-    "--parallel", "-p", is_flag=True, help="Process files in parallel (experimental)"
+    "--parallel",
+    "-p",
+    is_flag=True,
+    help="Process files in parallel (experimental)",
 )
 @click.pass_context
 def batch_extract(
     ctx: click.Context,
-    input_files: tuple,
+    input_files: tuple[str, ...],
     template: str,
     output_dir: str,
     parallel: bool,
@@ -389,7 +404,7 @@ def batch_extract(
 
         try:
             input_text = Path(input_file).read_text(encoding="utf-8")
-            result = extractor.extract(input_text, schema)
+            result = extractor.extract(input_text, schema)  # type: ignore[arg-type]
 
             if result.success and result.data:
                 # Generate output filename
@@ -416,7 +431,7 @@ def batch_extract(
             failed += 1
 
     click.echo(
-        f"\n📊 Batch processing complete: {successful} successful, {failed} failed"
+        f"\n📊 Batch processing complete: {successful} successful, {failed} failed",
     )
 
     # Show session stats
@@ -443,7 +458,7 @@ def cost_analysis(ctx: click.Context) -> None:
     click.echo("=" * 40)
 
     # Current session stats
-    click.echo(f"Current session:")
+    click.echo("Current session:")
     click.echo(f"  Requests: {stats['total_requests']}")
     click.echo(f"  Total cost: ${stats['total_cost']:.6f}")
     click.echo(f"  Avg cost/request: ${stats['average_cost_per_request']:.6f}")
@@ -453,14 +468,14 @@ def cost_analysis(ctx: click.Context) -> None:
         "avg_total_tokens": stats.get("average_tokens_per_request", 1000),
         "avg_prompt_tokens": int(stats.get("average_tokens_per_request", 1000) * 0.8),
         "avg_completion_tokens": int(
-            stats.get("average_tokens_per_request", 1000) * 0.2
+            stats.get("average_tokens_per_request", 1000) * 0.2,
         ),
     }
 
     recommendations = extractor.cost_tracker.get_model_recommendations(usage_pattern)
 
     click.echo(
-        f"\n🎯 Model Recommendations (based on {stats['average_tokens_per_request']:.0f} avg tokens):"
+        f"\n🎯 Model Recommendations (based on {stats['average_tokens_per_request']:.0f} avg tokens):",
     )
     for model, info in recommendations.items():
         click.echo(f"  {model}:")

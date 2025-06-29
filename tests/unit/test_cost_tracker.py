@@ -1,10 +1,11 @@
 """Test cases for cost tracker module."""
 
 import pytest
+
 from structured_output_cookbook.utils.cost_tracker import (
+    CostInfo,
     CostTracker,
     TokenUsage,
-    CostInfo,
 )
 
 

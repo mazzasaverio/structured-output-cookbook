@@ -1,9 +1,10 @@
 """Configuration management for the application."""
 
 import os
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field, field_validator
+from typing import Any
+
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
@@ -26,7 +27,7 @@ class Config(BaseModel):
 
     @field_validator("openai_api_key")
     @classmethod
-    def validate_api_key(cls, v):
+    def validate_api_key(cls, v: str) -> str:
         """Validate API key format."""
         if not v.startswith(("sk-", "sk-proj-")):
             raise ValueError("OpenAI API key must start with 'sk-' or 'sk-proj-'")
@@ -34,7 +35,7 @@ class Config(BaseModel):
 
     @field_validator("log_level")
     @classmethod
-    def validate_log_level(cls, v):
+    def validate_log_level(cls, v: str) -> str:
         """Validate log level."""
         valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if v.upper() not in valid_levels:
@@ -43,7 +44,7 @@ class Config(BaseModel):
 
     @field_validator("log_format")
     @classmethod
-    def validate_log_format(cls, v):
+    def validate_log_format(cls, v: str) -> str:
         """Validate log format."""
         if v not in {"json", "text"}:
             raise ValueError("Log format must be 'json' or 'text'")
@@ -75,7 +76,7 @@ class Config(BaseModel):
         """Get masked API key for logging."""
         return f"{self.openai_api_key[:8]}...{self.openai_api_key[-4:]}"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, masking sensitive data."""
         data = self.model_dump()
         data["openai_api_key"] = self.get_masked_api_key()

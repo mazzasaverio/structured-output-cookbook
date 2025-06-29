@@ -1,6 +1,5 @@
 """Test cases for configuration module."""
 
-import os
 import pytest
 from pydantic import ValidationError
 
@@ -29,7 +28,8 @@ class TestConfig:
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
         with pytest.raises(
-            ValueError, match="OPENAI_API_KEY environment variable is required"
+            ValueError,
+            match="OPENAI_API_KEY environment variable is required",
         ):
             Config.from_env()
 

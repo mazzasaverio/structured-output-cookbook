@@ -1,7 +1,7 @@
 """Email extraction schema."""
 
-from typing import List, Union, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import Field
+
 from ..schemas.base import BaseSchema
 
 
@@ -9,61 +9,61 @@ class EmailSchema(BaseSchema):
     """Extract structured information from emails."""
 
     # Email metadata
-    subject: Union[str, None] = Field(description="Email subject line")
-    sender_name: Union[str, None] = Field(description="Name of the sender")
-    sender_email: Union[str, None] = Field(description="Email address of the sender")
-    recipient_names: List[str] = Field(description="Names of recipients")
-    recipient_emails: List[str] = Field(description="Email addresses of recipients")
-    cc_emails: List[str] = Field(description="CC email addresses")
-    bcc_emails: List[str] = Field(description="BCC email addresses if visible")
+    subject: str | None = Field(description="Email subject line")
+    sender_name: str | None = Field(description="Name of the sender")
+    sender_email: str | None = Field(description="Email address of the sender")
+    recipient_names: list[str] = Field(description="Names of recipients")
+    recipient_emails: list[str] = Field(description="Email addresses of recipients")
+    cc_emails: list[str] = Field(description="CC email addresses")
+    bcc_emails: list[str] = Field(description="BCC email addresses if visible")
 
     # Email classification
-    email_type: Union[str, None] = Field(
-        description="Type of email: business, personal, marketing, support, etc."
+    email_type: str | None = Field(
+        description="Type of email: business, personal, marketing, support, etc.",
     )
-    priority: Union[str, None] = Field(description="Priority level: high, medium, low")
-    category: Union[str, None] = Field(
-        description="Category: inquiry, complaint, order, meeting, etc."
+    priority: str | None = Field(description="Priority level: high, medium, low")
+    category: str | None = Field(
+        description="Category: inquiry, complaint, order, meeting, etc.",
     )
 
     # Content analysis
-    main_topic: Union[str, None] = Field(description="Main topic or subject matter")
-    summary: Union[str, None] = Field(description="Brief summary of the email content")
-    key_points: List[str] = Field(description="Key points or important information")
-    action_items: List[str] = Field(description="Action items or tasks mentioned")
+    main_topic: str | None = Field(description="Main topic or subject matter")
+    summary: str | None = Field(description="Brief summary of the email content")
+    key_points: list[str] = Field(description="Key points or important information")
+    action_items: list[str] = Field(description="Action items or tasks mentioned")
 
     # Requests and responses
-    questions_asked: List[str] = Field(description="Questions asked in the email")
-    requests_made: List[str] = Field(description="Specific requests made")
-    deadlines_mentioned: List[str] = Field(description="Deadlines or dates mentioned")
+    questions_asked: list[str] = Field(description="Questions asked in the email")
+    requests_made: list[str] = Field(description="Specific requests made")
+    deadlines_mentioned: list[str] = Field(description="Deadlines or dates mentioned")
 
     # Contact information
-    phone_numbers: List[str] = Field(description="Phone numbers mentioned")
-    addresses: List[str] = Field(description="Physical addresses mentioned")
-    websites_urls: List[str] = Field(description="Websites or URLs mentioned")
+    phone_numbers: list[str] = Field(description="Phone numbers mentioned")
+    addresses: list[str] = Field(description="Physical addresses mentioned")
+    websites_urls: list[str] = Field(description="Websites or URLs mentioned")
 
     # Business context
-    company_names: List[str] = Field(description="Company names mentioned")
-    product_services: List[str] = Field(description="Products or services mentioned")
-    amounts_prices: List[str] = Field(
-        description="Monetary amounts or prices mentioned"
+    company_names: list[str] = Field(description="Company names mentioned")
+    product_services: list[str] = Field(description="Products or services mentioned")
+    amounts_prices: list[str] = Field(
+        description="Monetary amounts or prices mentioned",
     )
 
     # Sentiment and tone
-    sentiment: Union[str, None] = Field(
-        description="Overall sentiment: positive, negative, neutral"
+    sentiment: str | None = Field(
+        description="Overall sentiment: positive, negative, neutral",
     )
-    tone: Union[str, None] = Field(
-        description="Tone: formal, informal, urgent, friendly, etc."
+    tone: str | None = Field(
+        description="Tone: formal, informal, urgent, friendly, etc.",
     )
 
     # Response requirements
-    requires_response: Union[bool, None] = Field(
-        description="Whether the email requires a response"
+    requires_response: bool | None = Field(
+        description="Whether the email requires a response",
     )
-    response_urgency: Union[str, None] = Field(description="Urgency of response needed")
-    suggested_response_points: List[str] = Field(
-        description="Key points to address in response"
+    response_urgency: str | None = Field(description="Urgency of response needed")
+    suggested_response_points: list[str] = Field(
+        description="Key points to address in response",
     )
 
     @classmethod

@@ -1,7 +1,10 @@
 """Logging configuration using Loguru."""
 
 import sys
+from typing import Any
+
 from loguru import logger
+
 from ..config import Config
 
 
@@ -37,6 +40,6 @@ def setup_minimal_logger(level: str = "WARNING") -> None:
     logger.add(sys.stderr, format=format_str, level=level.upper(), colorize=True)
 
 
-def get_logger(name: str):
+def get_logger(name: str) -> Any:
     """Get a logger instance for a specific module."""
     return logger.bind(name=name)

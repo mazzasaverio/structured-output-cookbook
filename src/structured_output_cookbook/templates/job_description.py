@@ -1,7 +1,7 @@
 """Job description extraction schema."""
 
-from typing import List, Union
 from pydantic import Field
+
 from ..schemas.base import BaseSchema
 
 
@@ -10,27 +10,27 @@ class JobDescriptionSchema(BaseSchema):
 
     title: str = Field(description="Job title or position name")
     company: str = Field(description="Company name")
-    location: Union[str, None] = Field(description="Job location")
-    employment_type: Union[str, None] = Field(
-        description="Employment type (full-time, part-time, contract, etc.)"
+    location: str | None = Field(description="Job location")
+    employment_type: str | None = Field(
+        description="Employment type (full-time, part-time, contract, etc.)",
     )
-    experience_level: Union[str, None] = Field(
-        description="Required experience level (entry, mid, senior, etc.)"
+    experience_level: str | None = Field(
+        description="Required experience level (entry, mid, senior, etc.)",
     )
-    salary_range: Union[str, None] = Field(
-        description="Salary range or compensation information"
+    salary_range: str | None = Field(
+        description="Salary range or compensation information",
     )
-    required_skills: List[str] = Field(
-        description="Required technical skills and technologies"
+    required_skills: list[str] = Field(
+        description="Required technical skills and technologies",
     )
-    preferred_skills: List[str] = Field(description="Preferred or nice-to-have skills")
-    responsibilities: List[str] = Field(
-        description="Key job responsibilities and duties"
+    preferred_skills: list[str] = Field(description="Preferred or nice-to-have skills")
+    responsibilities: list[str] = Field(
+        description="Key job responsibilities and duties",
     )
-    requirements: List[str] = Field(description="Job requirements and qualifications")
-    benefits: List[str] = Field(description="Benefits and perks offered")
-    remote_work: Union[bool, None] = Field(
-        description="Whether remote work is available"
+    requirements: list[str] = Field(description="Job requirements and qualifications")
+    benefits: list[str] = Field(description="Benefits and perks offered")
+    remote_work: bool | None = Field(
+        description="Whether remote work is available",
     )
 
     @classmethod
