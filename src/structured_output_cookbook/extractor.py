@@ -1,12 +1,13 @@
 """Main extractor class for structured output generation."""
 
 import json
-from typing import Type, Dict, Any, Optional
-from openai import OpenAI
+import time
+from typing import Type, Dict, Any, Optional, List
+from openai import OpenAI, APIError, RateLimitError, APITimeoutError
 from pydantic import ValidationError
 
 from .config import Config
-from .utils import get_logger
+from .utils import get_logger, RateLimiter, SimpleCache, CostTracker, TokenUsage
 from .schemas.base import BaseSchema, ExtractionResult
 from .utils import YamlSchema
 
@@ -19,6 +20,18 @@ class StructuredExtractor:
         self.config = config or Config.from_env()
         self.client = OpenAI(api_key=self.config.openai_api_key)
         self.logger = get_logger(__name__)
+        
+        # Initialize rate limiter
+        self.rate_limiter = RateLimiter(self.config.rate_limit_requests_per_minute)
+        
+        # Initialize cache if enabled
+        self.cache = SimpleCache(self.config.cache_ttl_seconds) if self.config.enable_caching else None
+        
+        # Initialize cost tracker
+        self.cost_tracker = CostTracker()
+        
+        # Log configuration (with masked API key)
+        self.logger.info(f"Extractor initialized with config: {self.config.to_dict()}")
         
     def extract(
         self, 
@@ -37,60 +50,156 @@ class StructuredExtractor:
         Returns:
             ExtractionResult with success status and extracted data
         """
-        try:
-            self.logger.info(
-                f"Starting extraction with schema: {schema.get_schema_name()}"
+        # Validate input
+        validation_error = self._validate_input(text)
+        if validation_error:
+            return ExtractionResult.error_result(validation_error)
+        
+        schema_name = schema.get_schema_name()
+        self.logger.info(f"Starting extraction with schema: {schema_name}")
+        
+        # Check cache first
+        if self.cache:
+            cached_result = self.cache.get(
+                text, schema_name, self.config.openai_model, self.config.temperature
             )
-            
-            # Use custom prompt or schema default
-            prompt = system_prompt or schema.get_extraction_prompt()
-            
-            # Generate schema and ensure additionalProperties is false
-            schema_dict = schema.model_json_schema()
-            self._ensure_additional_properties_false(schema_dict)
-            
-            response = self.client.chat.completions.create(
-                model=self.config.openai_model,
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": text}
-                ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": schema.get_schema_name().lower().replace(" ", "_"),
-                        "strict": True,
-                        "schema": schema_dict
-                    }
-                },
-                timeout=self.config.timeout_seconds
-            )
-            
-            # Parse the response
-            content = response.choices[0].message.content
-            if not content:
-                return ExtractionResult.error_result("Empty response from LLM")
-            
-            # Parse JSON and validate with schema
-            try:
-                raw_data = json.loads(content)
-                validated_data = schema(**raw_data)
-                
-                self.logger.info("Extraction completed successfully")
-                
+            if cached_result:
+                self.logger.info("Returning cached result")
                 return ExtractionResult.success_result(
-                    data=validated_data.model_dump(),
-                    model_used=response.model,
-                    tokens_used=response.usage.total_tokens if response.usage else None
+                    data=cached_result,
+                    model_used=self.config.openai_model,
+                    tokens_used=None  # We don't store token usage in cache
+                )
+        
+        # Use custom prompt or schema default
+        prompt = system_prompt or schema.get_extraction_prompt()
+        
+        # Generate schema and ensure additionalProperties is false
+        schema_dict = schema.model_json_schema()
+        self._ensure_additional_properties_false(schema_dict)
+        
+        # Execute with retry logic
+        for attempt in range(self.config.max_retries + 1):
+            try:
+                # Rate limiting
+                self.rate_limiter.wait_if_needed()
+                
+                self.logger.debug(f"Attempt {attempt + 1}/{self.config.max_retries + 1}")
+                
+                response = self.client.chat.completions.create(
+                    model=self.config.openai_model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": text}
+                    ],
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": schema_name.lower().replace(" ", "_"),
+                            "strict": True,
+                            "schema": schema_dict
+                        }
+                    },
+                    timeout=self.config.timeout_seconds,
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens
                 )
                 
-            except (json.JSONDecodeError, ValidationError) as e:
-                self.logger.error(f"Failed to parse/validate response: {e}")
-                return ExtractionResult.error_result(f"Invalid response format: {str(e)}")
+                # Parse the response
+                content = response.choices[0].message.content
+                if not content:
+                    if attempt < self.config.max_retries:
+                        self.logger.warning(f"Empty response, retrying... (attempt {attempt + 1})")
+                        continue
+                    return ExtractionResult.error_result("Empty response from LLM after all retries")
                 
-        except Exception as e:
-            self.logger.error(f"Extraction failed: {e}")
-            return ExtractionResult.error_result(str(e))
+                # Parse JSON and validate with schema
+                try:
+                    raw_data = json.loads(content)
+                    validated_data = schema(**raw_data)
+                    
+                    # Track cost
+                    if response.usage:
+                        usage = TokenUsage(
+                            prompt_tokens=response.usage.prompt_tokens,
+                            completion_tokens=response.usage.completion_tokens,
+                            total_tokens=response.usage.total_tokens
+                        )
+                        self.cost_tracker.track_request(response.model, usage, schema_name)
+                    
+                    # Cache the result
+                    if self.cache:
+                        self.cache.set(
+                            text, schema_name, self.config.openai_model, 
+                            self.config.temperature, validated_data.model_dump()
+                        )
+                    
+                    self.logger.info("Extraction completed successfully")
+                    
+                    return ExtractionResult.success_result(
+                        data=validated_data.model_dump(),
+                        model_used=response.model,
+                        tokens_used=response.usage.total_tokens if response.usage else None
+                    )
+                    
+                except (json.JSONDecodeError, ValidationError) as e:
+                    if attempt < self.config.max_retries:
+                        self.logger.warning(f"Failed to parse/validate response, retrying... Error: {e}")
+                        continue
+                    self.logger.error(f"Failed to parse/validate response after all retries: {e}")
+                    return ExtractionResult.error_result(f"Invalid response format: {str(e)}")
+                
+            except RateLimitError as e:
+                self.logger.warning(f"Rate limit hit, waiting before retry... {e}")
+                time.sleep(min(2 ** attempt, 60))  # Exponential backoff, max 60s
+                continue
+                
+            except APITimeoutError as e:
+                if attempt < self.config.max_retries:
+                    self.logger.warning(f"API timeout, retrying... {e}")
+                    continue
+                self.logger.error(f"API timeout after all retries: {e}")
+                return ExtractionResult.error_result(f"API timeout: {str(e)}")
+                
+            except APIError as e:
+                # Check if it's a retryable error
+                retryable = hasattr(e, 'status_code') and getattr(e, 'status_code', 0) in [500, 502, 503, 504]
+                if attempt < self.config.max_retries and retryable:
+                    self.logger.warning(f"API error {getattr(e, 'status_code', 'unknown')}, retrying... {e}")
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                    continue
+                self.logger.error(f"API error: {e}")
+                return ExtractionResult.error_result(f"API error: {str(e)}")
+                
+            except Exception as e:
+                if attempt < self.config.max_retries:
+                    self.logger.warning(f"Unexpected error, retrying... {e}")
+                    continue
+                self.logger.error(f"Extraction failed after all retries: {e}")
+                return ExtractionResult.error_result(str(e))
+        
+        return ExtractionResult.error_result("Max retries exceeded")
+    
+    def _validate_input(self, text: str) -> Optional[str]:
+        """Validate input text.
+        
+        Args:
+            text: Input text to validate
+            
+        Returns:
+            Error message if validation fails, None otherwise
+        """
+        if not text or not text.strip():
+            return "Input text cannot be empty"
+        
+        if len(text) > self.config.max_input_length:
+            return f"Input text too long: {len(text)} > {self.config.max_input_length} characters"
+        
+        # Basic text validation
+        if len(text.strip()) < 10:
+            return "Input text too short: minimum 10 characters required"
+        
+        return None
     
     def extract_with_yaml_schema(
         self,

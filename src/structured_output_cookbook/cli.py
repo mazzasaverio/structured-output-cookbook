@@ -12,11 +12,17 @@ from .extractor import StructuredExtractor
 from .utils import setup_logger, get_logger, SchemaLoader
 from .templates.job_description import JobDescriptionSchema
 from .templates.recipe import RecipeSchema
+from .templates.product_review import ProductReviewSchema
+from .templates.email import EmailSchema
+from .templates.event import EventSchema
 
 # Available predefined templates
 TEMPLATES = {
     "job": JobDescriptionSchema,
     "recipe": RecipeSchema,
+    "product-review": ProductReviewSchema,
+    "email": EmailSchema,
+    "event": EventSchema,
 }
 
 
@@ -156,8 +162,15 @@ def extract(
     
     # Show stats
     if result.tokens_used:
-        click.echo(f"📊 Tokens used: {result.tokens_used}")
-        click.echo(f"💰 Estimated cost: ~${(result.tokens_used * 0.00001):.4f}")  # Rough estimate
+        # Get accurate cost from extractor's cost tracker
+        if hasattr(extractor, 'cost_tracker') and extractor.cost_tracker.session_costs:
+            last_request = extractor.cost_tracker.session_costs[-1]
+            actual_cost = last_request["cost"]["total_cost"]
+            click.echo(f"📊 Tokens used: {result.tokens_used}")
+            click.echo(f"💰 Actual cost: ${actual_cost:.6f}")
+        else:
+            click.echo(f"📊 Tokens used: {result.tokens_used}")
+            click.echo(f"💰 Estimated cost: ~${(result.tokens_used * 0.00001):.4f}")  # Fallback
 
 
 @main.command()
@@ -237,8 +250,174 @@ def extract_custom(
     
     # Show stats
     if result.tokens_used:
-        click.echo(f"📊 Tokens used: {result.tokens_used}")
-        click.echo(f"💰 Estimated cost: ~${(result.tokens_used * 0.00001):.4f}")  # Rough estimate
+        # Get accurate cost from extractor's cost tracker
+        if hasattr(extractor, 'cost_tracker') and extractor.cost_tracker.session_costs:
+            last_request = extractor.cost_tracker.session_costs[-1]
+            actual_cost = last_request["cost"]["total_cost"]
+            click.echo(f"📊 Tokens used: {result.tokens_used}")
+            click.echo(f"💰 Actual cost: ${actual_cost:.6f}")
+        else:
+            click.echo(f"📊 Tokens used: {result.tokens_used}")
+            click.echo(f"💰 Estimated cost: ~${(result.tokens_used * 0.00001):.4f}")  # Fallback
+
+
+@main.command()
+@click.option("--config-dir", default="config/schemas", help="Directory containing YAML schema files")
+@click.pass_context
+def validate_schemas(ctx: click.Context, config_dir: str) -> None:
+    """Validate all custom YAML schemas."""
+    logger = ctx.obj["logger"]
+    loader = SchemaLoader(config_dir)
+    schemas = loader.get_available_schemas()
+    
+    if not schemas:
+        click.echo(f"No schemas found in {config_dir}")
+        return
+    
+    click.echo(f"Validating {len(schemas)} schemas in {config_dir}...")
+    
+    valid_count = 0
+    for schema_name in schemas:
+        is_valid, error = loader.validate_schema_structure(schema_name)
+        if is_valid:
+            valid_count += 1
+            click.echo(f"✅ {schema_name}: Valid")
+        else:
+            click.echo(f"❌ {schema_name}: {error}")
+    
+    click.echo(f"\n📊 Results: {valid_count}/{len(schemas)} schemas are valid")
+
+
+@main.command()
+@click.pass_context
+def session_stats(ctx: click.Context) -> None:
+    """Show session statistics for API usage."""
+    config = ctx.obj["config"]
+    
+    # Create a temporary extractor to get session stats
+    extractor = StructuredExtractor(config)
+    stats = extractor.cost_tracker.get_session_stats()
+    
+    if stats["total_requests"] == 0:
+        click.echo("No API requests made in this session.")
+        return
+    
+    click.echo("📊 Session Statistics")
+    click.echo("=" * 30)
+    click.echo(f"Total requests: {stats['total_requests']}")
+    click.echo(f"Total tokens: {stats['total_tokens']:,}")
+    click.echo(f"Total cost: ${stats['total_cost']:.6f}")
+    click.echo(f"Average tokens per request: {stats['average_tokens_per_request']:.1f}")
+    click.echo(f"Average cost per request: ${stats['average_cost_per_request']:.6f}")
+    click.echo(f"Models used: {', '.join(stats['models_used'])}")
+    click.echo(f"Extraction types: {', '.join(stats['extraction_types'])}")
+
+
+@main.command()
+@click.argument("input_files", nargs=-1, required=True, type=click.Path(exists=True))
+@click.argument("template", type=click.Choice(list(TEMPLATES.keys())))
+@click.option("--output-dir", "-d", default="data/batch", help="Output directory for batch results")
+@click.option("--parallel", "-p", is_flag=True, help="Process files in parallel (experimental)")
+@click.pass_context
+def batch_extract(
+    ctx: click.Context,
+    input_files: tuple,
+    template: str,
+    output_dir: str,
+    parallel: bool
+) -> None:
+    """Extract data from multiple files using a predefined template."""
+    logger = ctx.obj["logger"]
+    config = ctx.obj["config"]
+    
+    if parallel:
+        click.echo("⚠️  Parallel processing is experimental and may hit rate limits")
+    
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    extractor = StructuredExtractor(config)
+    schema = TEMPLATES[template]
+    
+    successful = 0
+    failed = 0
+    
+    click.echo(f"🔄 Processing {len(input_files)} files with template: {template}")
+    
+    for i, input_file in enumerate(input_files, 1):
+        click.echo(f"[{i}/{len(input_files)}] Processing {input_file}...")
+        
+        try:
+            input_text = Path(input_file).read_text(encoding="utf-8")
+            result = extractor.extract(input_text, schema)
+            
+            if result.success and result.data:
+                # Generate output filename
+                input_name = Path(input_file).stem
+                output_file = output_path / f"{template}_{input_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                
+                # Save result
+                output_file.write_text(
+                    json.dumps(result.data, indent=2, ensure_ascii=False),
+                    encoding="utf-8"
+                )
+                
+                click.echo(f"  ✅ Saved to {output_file}")
+                successful += 1
+            else:
+                click.echo(f"  ❌ Failed: {result.error}")
+                failed += 1
+                
+        except Exception as e:
+            click.echo(f"  ❌ Error reading file: {e}")
+            failed += 1
+    
+    click.echo(f"\n📊 Batch processing complete: {successful} successful, {failed} failed")
+    
+    # Show session stats
+    stats = extractor.cost_tracker.get_session_stats()
+    if stats["total_requests"] > 0:
+        click.echo(f"💰 Total cost: ${stats['total_cost']:.6f}")
+
+
+@main.command()
+@click.pass_context
+def cost_analysis(ctx: click.Context) -> None:
+    """Show cost analysis and model recommendations."""
+    config = ctx.obj["config"]
+    extractor = StructuredExtractor(config)
+    
+    # Get session stats
+    stats = extractor.cost_tracker.get_session_stats()
+    
+    if stats["total_requests"] == 0:
+        click.echo("No requests made. Run some extractions first to see cost analysis.")
+        return
+    
+    click.echo("💰 Cost Analysis")
+    click.echo("=" * 40)
+    
+    # Current session stats
+    click.echo(f"Current session:")
+    click.echo(f"  Requests: {stats['total_requests']}")
+    click.echo(f"  Total cost: ${stats['total_cost']:.6f}")
+    click.echo(f"  Avg cost/request: ${stats['average_cost_per_request']:.6f}")
+    
+    # Model recommendations based on usage
+    usage_pattern = {
+        "avg_total_tokens": stats.get("average_tokens_per_request", 1000),
+        "avg_prompt_tokens": int(stats.get("average_tokens_per_request", 1000) * 0.8),
+        "avg_completion_tokens": int(stats.get("average_tokens_per_request", 1000) * 0.2),
+    }
+    
+    recommendations = extractor.cost_tracker.get_model_recommendations(usage_pattern)
+    
+    click.echo(f"\n🎯 Model Recommendations (based on {stats['average_tokens_per_request']:.0f} avg tokens):")
+    for model, info in recommendations.items():
+        click.echo(f"  {model}:")
+        click.echo(f"    Cost per request: ${info['cost_per_request']:.6f}")
+        click.echo(f"    Cost per 1K requests: ${info['cost_per_1k_requests']:.2f}")
+        click.echo(f"    Relative cost: {info['relative_cost']}")
 
 
 if __name__ == "__main__":
