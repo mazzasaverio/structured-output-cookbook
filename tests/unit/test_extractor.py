@@ -1,5 +1,6 @@
 """Test cases for extractor module."""
 
+import json
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from openai import RateLimitError, APITimeoutError, APIError
@@ -76,10 +77,28 @@ class TestStructuredExtractor:
     @patch('structured_output_cookbook.extractor.time.sleep')
     def test_extract_with_retry_on_rate_limit(self, mock_sleep, extractor):
         """Test extraction with retry on rate limit error."""
+        # Complete mock response with all required fields
+        complete_recipe = {
+            "name": "Test Recipe",
+            "description": "A delicious test recipe",
+            "cuisine": "Italian",
+            "difficulty": "easy",
+            "prep_time": "15 minutes",
+            "cook_time": "30 minutes",
+            "total_time": "45 minutes",
+            "servings": 4,
+            "ingredients": [
+                {"name": "flour", "quantity": "2", "unit": "cups", "notes": None}
+            ],
+            "instructions": ["Mix ingredients", "Cook until done"],
+            "tags": ["vegetarian", "easy"],
+            "nutrition": {"calories": 200}
+        }
+        
         # Mock the OpenAI response
         mock_response = Mock()
         mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = '{"name": "Test Recipe"}'
+        mock_response.choices[0].message.content = json.dumps(complete_recipe)
         mock_response.model = "gpt-4o-mini"
         mock_response.usage = Mock()
         mock_response.usage.total_tokens = 100
@@ -110,10 +129,28 @@ class TestStructuredExtractor:
     
     def test_extract_success(self, extractor):
         """Test successful extraction."""
+        # Complete mock response with all required fields
+        complete_recipe = {
+            "name": "Test Recipe",
+            "description": "A delicious test recipe",
+            "cuisine": "Italian",
+            "difficulty": "easy",
+            "prep_time": "15 minutes",
+            "cook_time": "30 minutes",
+            "total_time": "45 minutes",
+            "servings": 4,
+            "ingredients": [
+                {"name": "flour", "quantity": "2", "unit": "cups", "notes": None}
+            ],
+            "instructions": ["Mix ingredients", "Cook until done"],
+            "tags": ["vegetarian", "easy"],
+            "nutrition": {"calories": 200}
+        }
+        
         # Mock the OpenAI response
         mock_response = Mock()
         mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = '{"name": "Test Recipe", "ingredients": [], "instructions": []}'
+        mock_response.choices[0].message.content = json.dumps(complete_recipe)
         mock_response.model = "gpt-4o-mini"
         mock_response.usage = Mock()
         mock_response.usage.total_tokens = 100
@@ -171,8 +208,21 @@ class TestStructuredExtractor:
         with patch('structured_output_cookbook.extractor.OpenAI'):
             extractor = StructuredExtractor(config)
             
-            # Mock cache hit
-            cached_data = {"name": "Cached Recipe", "ingredients": [], "instructions": []}
+            # Mock cache hit with complete data
+            cached_data = {
+                "name": "Cached Recipe",
+                "description": "A cached recipe",
+                "cuisine": None,
+                "difficulty": None,
+                "prep_time": None,
+                "cook_time": None,
+                "total_time": None,
+                "servings": None,
+                "ingredients": [],
+                "instructions": [],
+                "tags": [],
+                "nutrition": None
+            }
             if extractor.cache:
                 extractor.cache.get = Mock(return_value=cached_data)
             

@@ -77,6 +77,6 @@ class Config(BaseModel):
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary, masking sensitive data."""
-        data = self.dict()
+        data = self.model_dump()
         data['openai_api_key'] = self.get_masked_api_key()
         return data
