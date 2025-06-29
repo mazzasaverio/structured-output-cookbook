@@ -1,6 +1,6 @@
 """Structured Output Cookbook - Extract structured data from text using LLMs with ready-to-use templates."""
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __author__ = "Saverio Mazza"
 __email__ = "saverio3107@gmail.com"
 __description__ = (
