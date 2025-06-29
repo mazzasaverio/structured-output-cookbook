@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Performance optimizations
 
+## [0.1.1] - TBD
+
+### Fixed
+- Fix CI/CD build command from `uvx build` to `uv build`
+- Update GitHub Actions workflow for proper package building
+
+### Technical
+- Remove unnecessary `uv tool install build` from CI pipeline
+- Improve automated release process reliability
+
 ## [0.1.0] - 2025-06-29
 
 ### Added

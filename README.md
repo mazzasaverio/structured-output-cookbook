@@ -261,14 +261,6 @@ uv run ruff --fix .
 # Install pre-commit hooks
 uv run pre-commit install
 ```
-
-## 📈 Performance Tips
-
-1. **Batch Processing**: Process multiple files in sequence for better efficiency
-2. **Model Selection**: Use `gpt-4o-mini` for cost-effective extraction
-3. **Schema Optimization**: Keep schemas focused and avoid unnecessary fields
-4. **Caching**: Results are automatically saved with timestamps for reference
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
@@ -289,10 +281,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Powered by OpenAI's language models
 - Inspired by the need for reliable structured data extraction
 
-## 📚 Related Projects
+## 📚 References
 
 - [Instructor](https://github.com/jxnl/instructor) - Structured outputs with function calling
-- [Marvin](https://github.com/prefecthq/marvin) - AI toolkit for building reliable AI-powered software
 - [Outlines](https://github.com/outlines-dev/outlines) - Structured generation for LLMs
 
 ---
